@@ -9,6 +9,7 @@ class ReparameterizedDiagonalGaussian(Distribution):
         assert mu.shape == log_sigma.shape, f"Tensors `mu` : {mu.shape} and ` log_sigma` : {log_sigma.shape} must be of the same shape"
         self.mu = mu
         self.sigma = log_sigma.exp()
+        self.size0 = mu.size(0)
         
     def sample_epsilon(self) -> Tensor:
         """`\eps ~ N(0, I)`"""

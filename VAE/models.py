@@ -3,41 +3,6 @@ from torch.distributions import Distribution
 from reparameterize import ReparameterizedDiagonalGaussian
 
 
-class VariationalInference(nn.Module):
-    def __init__(self, beta:float=1.):
-        super().__init__()
-        self.beta = beta
-        
-    def forward(self, model:nn.Module, x:Tensor) -> Tuple[Tensor, Dict]:
-        
-        # forward pass through the model
-        outputs = model(x)
-        
-        # unpack outputs
-        px, pz, qz, z = [outputs[k] for k in ["px", "pz", "qz", "z"]]
-        
-        # evaluate log probabilities
-        log_px = px.log_prob(x).view(px.size(0), -1).sum(dim=1)
-        log_pz = pz.log_prob(z).view(pz.size(0), -1).sum(dim=1)
-        log_qz = qz.log_prob(z).view(qz.size(0), -1).sum(dim=1)
-        
-        # compute the ELBO with and without the beta parameter: 
-        # `L^\beta = E_q [ log p(x|z) - \beta * D_KL(q(z|x) | p(z))`
-        # where `D_KL(q(z|x) | p(z)) = log q(z|x) - log p(z)`
-        kl = log_qz - log_pz
-        elbo = log_px - kl
-        beta_elbo = log_px - beta * kl
-        
-        # loss
-        loss = -beta_elbo.mean()
-        
-        # prepare the output
-        with torch.no_grad():
-            diagnostics = {'elbo': elbo, 'log_px':log_px, 'kl': kl}
-            
-        return loss, diagnostics, outputs
-
-
 class BaseVAEprob(nn.Module):
     """A Variational Autoencoder with
     * a Bernoulli observation model `p_\theta(x | z) = B(x | g_\theta(z))`
@@ -49,7 +14,7 @@ class BaseVAEprob(nn.Module):
         super(BaseVAEprob, self).__init__()
         
         self.latent_features = latent_features
-        self.vi = VariationalInference(beta)
+        self.beta=beta
 
         # Inference Network
         # Encode the observation `x` into the parameters of the posterior distribution
@@ -125,5 +90,32 @@ class BaseVAEprob(nn.Module):
         
         return {'px': px, 'pz': pz, 'z': z}
 
+    def elbo(self, x:Tensor) -> Tuple[Tensor, Dict]:
+        
+        # forward pass through the model
+        outputs = self.forward(x)
+        
+        # unpack outputs
+        px, pz, qz, z = [outputs[k] for k in ["px", "pz", "qz", "z"]]
+        
+        # evaluate log probabilities
+        log_px = px.log_prob(x).view(px.size0, -1).sum(dim=1)
+        log_pz = pz.log_prob(z).view(pz.size0, -1).sum(dim=1)
+        log_qz = qz.log_prob(z).view(qz.size0, -1).sum(dim=1)
+        
+        # compute the ELBO with and without the beta parameter: 
+        # `L^\beta = E_q [ log p(x|z) - \beta * D_KL(q(z|x) | p(z))`
+        # where `D_KL(q(z|x) | p(z)) = log q(z|x) - log p(z)`
 
-
+        kl = log_qz - log_pz
+        elbo = log_px - kl
+        beta_elbo = log_px - self.beta * kl
+        
+        # loss
+        loss = -beta_elbo.mean()
+        
+        # prepare the output
+        with torch.no_grad():
+            diagnostics = {'elbo': elbo, 'log_px':log_px, 'kl': kl}
+            
+        return loss, diagnostics, outputs
