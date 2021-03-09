@@ -1,5 +1,6 @@
 import torch
 from torch.distributions import Distribution
+from torch import Tensor
 
 class ReparameterizedDiagonalGaussian(Distribution):
     """
@@ -10,6 +11,9 @@ class ReparameterizedDiagonalGaussian(Distribution):
         self.mu = mu
         self.sigma = log_sigma.exp()
         self.size0 = mu.size(0)
+    
+    def __repr__(self):
+        return self.__class__.__name__ + f"(mu={self.mu}, sigma={self.sigma})"
         
     def sample_epsilon(self) -> Tensor:
         """`\eps ~ N(0, I)`"""
