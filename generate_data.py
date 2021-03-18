@@ -25,10 +25,9 @@ Author: Tommy Sonne Alstrøm <tsal@dtu.dk>
 
  generate simulated raman data
 
-
 """
 
-# TODO: Implement good saving and loading of entire class instance
+
 
 class SERSGenerator:
     def __init__(self, mapsize, Nw, seed=None, c=None, gamma=None, eta=None):
@@ -37,15 +36,20 @@ class SERSGenerator:
         self.w = np.arange(Nw)
 
         self.seed = seed
+        if c is not None and gamma is not None and eta is not None:
+            assert len(c) == len(gamma) == len(eta)
+            self.K = len(c)
 
-        assert len(c) == len(gamma) == len(eta)
-        self.K = len(c)
+            self.c = c
+            self.gamma = gamma
+            self.eta = eta
 
-        self.c = c
-        self.gamma = gamma
-        self.eta = eta
-
-
+        elif c is not None:
+            self.c = c
+        else:
+            self.c = None
+            self.gamma = None
+            self.eta = None
 
 
     def pseudo_voigt(self, w, c, gamma, eta):
@@ -88,8 +92,8 @@ class SERSGenerator:
         return Vo
 
 
-    def generate(self, N_hotspots, K, sig, sbr, p_outlier=0,  background='default', plot=True, smooth=False, *bgargs,
-                 **bgkwargs):
+    def generate(self, N_hotspots, K, sig, sbr, p_outlier=0,  background='default', plot=True, smooth=False, reset=False, plot_matrix=False,
+                *bgargs, **bgkwargs):
         """Generates a SERS map. Also sets several attributes in the object with generated quantities for
         later retrieval.
 
@@ -114,12 +118,17 @@ class SERSGenerator:
             plot:       Plot generated qunatities on generation (boolean)
             smooth:     Should Savitzky-Golay background smoothing be applied? (boolean)
                         Only available if background == 'default'
+            reset:      Specifies whether the generation should be reset, such that it runs with variables set to None
             *bgargs:    Any extra arguments to background if callable(background) == True.
             **bgkwargs: Any extra keyword-only arguments to background if callable(background) == True
 
         Returns:
-            X:          Generated SERS map. (np.ndarray of size prod(self.mapsize, self.Nw)
+            X:          Generated SERS map. (np.ndarray of size (self.nw, np.prod(mapsize))
         """
+        if reset:
+            self.c = None
+            self.eta = None
+            self.gamma = None
         if self.seed is not None:
             np.random.seed(self.seed)
 
@@ -236,6 +245,8 @@ class SERSGenerator:
         ### Generate hotspots (signal)
         if N_hotspots > 0:
             mu = repmat(self.mapsize, N_hotspots, 1) * np.random.rand(N_hotspots, 2)
+            mu = np.rint(mu)
+            self.hotspot_loc = mu
             r = 5*np.random.rand(N_hotspots, 1) + 2
             A = np.random.rand(N_hotspots,1)
             X = np.arange(self.mapsize[0])
@@ -256,16 +267,22 @@ class SERSGenerator:
             alpha = mina + mina*np.random.rand(K)
             if self.gamma is None:
                 gamma = np.random.gamma(21, 0.5, size=K)
+                self.gamma = gamma
             else:
                 gamma = self.gamma
             if self.c is None:
                 c = gamma + (self.Nw - 2*gamma)*np.random.rand(K)
+                c = np.rint(c)
+
+                self.c = c
             else:
                 c = self.c
             if self.eta is None:
                 eta = np.random.rand(K)
+                self.eta = eta
             else:
                 eta = self.eta
+            
 
             Vp = self.pseudo_voigt(self.w, c, gamma, eta)
 
@@ -302,12 +319,54 @@ class SERSGenerator:
 
         self.X = X
 
+        self.map = self.X.reshape(*self.mapsize, -1)
+
+        max_val_map = np.max(self.map)
+        self.map_sum = np.zeros_like(self.map[:, :, 0])
+
+        for i, voigt_max in enumerate(self.c):
+            idx_max = int(voigt_max)
+            map_cut = self.map[:, :, idx_max]
+            self.map_sum += map_cut
+            if plot:
+                plt.matshow(map_cut, vmin=0, vmax=max_val_map)
+                plt.colorbar()
+                plt.title(f'Map for voight: {i+1}')
+                plt.show()
+        
+        self.map_sum /= len(self.c)
+        if plot:
+            plt.matshow(self.map_sum)
+            plt.colorbar()
+            plt.title(f'Map for voights')
+            plt.show()
+
         if plot:
             plt.matshow(X)
             plt.colorbar()
             plt.title('Data matrix')
+            plt.show()
+        
+        if plot_matrix:
+
+            fig, ax = plt.subplots(*self.mapsize, figsize=(20,12))
+            N, M = self.mapsize
+            for i in range(N):
+                for j in range(M):
+
+                    ax[i,j].plot(np.arange(self.Nw), self.map[i,j,:])
+                    ax[i,j].set_ylim([0, np.max(self.map)])
+
+                    ax[i,j].grid()
+                    fig.tight_layout()
+            
+            plt.show()
 
         return X
+
+        
+    
+
 
 
     def save(self, filename):
@@ -319,9 +378,19 @@ class SERSGenerator:
             dill.load(f)
 
 
+if __name__ == '__main__':
 
+    mapsize = [5, 5]
+    W = 30
+    seed = 42
+    generator = SERSGenerator(mapsize, W, seed)
+    X = generator.generate(N_hotspots=1, K=1, sig=0.2, sbr=1, p_outlier=0, plot=False, plot_matrix=True)
+    print(generator.hotspot_loc)
+    print(generator.c)
 
-
-
-
+    '''epochs = 5
+    for _ in epochs:
+        # X has same voight profile in every epoch but noise and background is not the same
+        X = generator.generate(N_hotspots=1, K=1, sig=0.2, sbr=1, p_outlier=0, plot=False)
+        #model.forward(X)'''
 
