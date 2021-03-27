@@ -270,8 +270,6 @@ class SERSGenerator:
             D = np.zeros(N)
 
             for h in range(N_hotspots):
-                print("h",h)
-                print("mu",mu.shape)
                 inner = (repmat(mu[h,:], N, 1) - P)**2
                 D = D + A[h].item() * np.exp(-np.sum(inner, axis=1)/(r[h]*r[h]))
 
