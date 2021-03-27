@@ -1,6 +1,6 @@
 import torch
 from torch.distributions import Distribution
-from reparameterize import ReparameterizedDiagonalGaussian
+from .reparameterize import ReparameterizedDiagonalGaussian
 
 
 class BaseVAEprob(nn.Module):
