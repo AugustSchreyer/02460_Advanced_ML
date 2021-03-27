@@ -101,7 +101,7 @@ class BaseVAEprob(nn.Module):
         px, pz, qz, z = [outputs[k] for k in ["px", "pz", "qz", "z"]]
         
         # evaluate log probabilities
-        log_px = px.log_prob(x.view(-1, int(decoder.seq_len))).view(px.size0, -1).sum(dim=1)
+        log_px = px.log_prob(x.view(-1, int(self.decoder.seq_len))).view(px.size0, -1).sum(dim=1)
         log_pz = pz.log_prob(z).view(pz.size0, -1).sum(dim=1)
         log_qz = qz.log_prob(z).view(qz.size0, -1).sum(dim=1)
         
