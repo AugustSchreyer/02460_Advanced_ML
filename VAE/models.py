@@ -131,7 +131,7 @@ class BaseLSTM_VAEprob(nn.Module):
     """
     
     def __init__(self, latent_features:int, encoder, decoder, beta=1) -> None:
-        super(BaseVAEprob, self).__init__()
+        super(BaseLSTM_VAEprob, self).__init__()
         
         self.latent_features = latent_features
         self.beta=beta
