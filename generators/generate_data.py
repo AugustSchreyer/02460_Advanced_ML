@@ -380,13 +380,15 @@ class SERSGenerator:
 
 if __name__ == '__main__':
 
-    mapsize = [5, 5]
+    mapsize = [15, 15]
     W = 30
     seed = 42
     generator = SERSGenerator(mapsize, W, seed)
-    X = generator.generate(N_hotspots=1, K=1, sig=0.2, sbr=1, p_outlier=0, plot=False, plot_matrix=True)
+    X = generator.generate(N_hotspots=1, K=1, sig=0.1, sbr=3, p_outlier=0, plot=True, plot_matrix=False)
     print(generator.hotspot_loc)
     print(generator.c)
+    
+    generator.save("tfh-generator.pkl")
 
     '''epochs = 5
     for _ in epochs:
