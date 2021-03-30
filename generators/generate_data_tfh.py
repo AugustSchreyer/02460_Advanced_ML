@@ -387,23 +387,27 @@ class SERSGenerator:
 
 if __name__ == '__main__':
     #### PARAMETERS ####
-    mapsize = [40, 40]
-    W = 100
+    mapsize = [25, 25]
+    W = 120
     seed = 42
 
     # HOTSPOT LOCATIONS
     hotspot_loc = np.array([
         [10, 3],
         [10, 15],
-        [20, 20]
+        [20, 20],
+        [15, 10],
+        [20, 5],
+        [15, 3],
+        [20, 5]
     ])
 
     # VOIGT LOCATIONS
-    c = np.array([25, 75])
+    c = np.array([70, 110])
 
     #### GENERATOR
     generator = SERSGenerator(mapsize, W, seed, hotspot_loc=hotspot_loc, c=c)
-    X = generator.generate(N_hotspots=len(hotspot_loc), sig=0.1, sbr=2, p_outlier=0, plot=True, plot_matrix=False)
+    X = generator.generate(N_hotspots=len(hotspot_loc), sig=0.4, sbr=5, p_outlier=0, plot=True, plot_matrix=False)
     print(generator.hotspot_loc)
     print(generator.c)
 
