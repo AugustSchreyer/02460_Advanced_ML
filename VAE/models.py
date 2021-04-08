@@ -525,7 +525,7 @@ class Neural_Stat(nn.Module):
             prior_z_L = self.latent_decoder_z_prior(c_extra)
             # Distribution of p(x|z,c_extra)
             p_x = self.observation_decoder_network(z,c_extra)
-            return {'p_x': p_x, 
+            return {'px': p_x, 
                     'posterior_z_L': posterior_z_L, 
                     'prior_z_L': prior_z_L,'z_L': z_L,
                     'posterior_c': posterior_c, 
@@ -539,7 +539,7 @@ class Neural_Stat(nn.Module):
             z = torch.cat((z_L,z_i),-1)
             # Distribution of p(x|z,c_extra)
             p_x = self.observation_decoder_network(z,c_extra)
-            return {'p_x': p_x, 
+            return {'px': p_x, 
                     'posterior_z_L': posterior_z_L,
                     'posterior_z_i': posterior_z_i,
                     'prior_z_L': prior_z_L,'z_L': z_L,
@@ -560,7 +560,7 @@ class Neural_Stat(nn.Module):
         if self.z_layers==1:
             p_x, posterior_z_L, prior_z_L,z_L,\
             posterior_c, prior_c, c, z = [outputs[k] for k in \
-                         ['p_x','posterior_z_L','prior_z_L',
+                         ['px','posterior_z_L','prior_z_L',
                          'z_L','posterior_c','prior_c','c','z']]
             # evaluate log probabilities
             # summing probabilities
@@ -584,7 +584,7 @@ class Neural_Stat(nn.Module):
             p_x, posterior_z_L, posterior_z_i, \
             prior_z_L, z_L, prior_z_i,z_i,\
             posterior_c, prior_c, c, z = [outputs[k] for k in \
-                         ['p_x','posterior_z_L','posterior_z_i',
+                         ['px','posterior_z_L','posterior_z_i',
                           'prior_z_L','z_L','prior_z_i','z_i',
                           'posterior_c','prior_c','c','z']]
             # evaluate log probabilities
