@@ -572,12 +572,13 @@ class Neural_Stat(nn.Module):
             # KL and elbo
             kl_z_L = log_post_z_L-log_prior_z_L
             kl_c = log_post_c-log_prior_c
-            elbo = log_px - self.beta1*kl_c - self.beta2*kl_z_L
+            beta_elbo = log_px - self.beta1*kl_c - self.beta2*kl_z_L
+            elbo = log_px - kl_c - kl_z_L
             # Loss function
-            loss = -elbo.mean()
+            loss = -beta_elbo.mean()
             # Saving for diagnostics
             with torch.no_grad():
-                diagnostics = {'elbo': elbo.mean(), 'log_px':log_px.mean(), 'kl_z_L': kl_z_L.mean(),'kl_c': kl_c.mean()}
+                diagnostics = {'beta_elbo':beta_elbo.mean(),'elbo': elbo.mean(), 'log_px':log_px.mean(), 'kl_z_L': kl_z_L.mean(),'kl_c': kl_c.mean()}
 
         else:
 
@@ -608,12 +609,13 @@ class Neural_Stat(nn.Module):
             #kl_z = log_post_z-log_prior_z
             #print(kl_z_L.mean()+kl_z_i.mean(),kl_z.mean())
             kl_c = log_post_c-log_prior_c
-            elbo = log_px-self.beta1*kl_c - self.beta2*kl_z_i-self.beta2*kl_z_L
+            beta_elbo = log_px-self.beta1*kl_c - self.beta2*kl_z_i-self.beta2*kl_z_L
+            elbo = log_px-kl_c - kl_z_i-kl_z_L
             # Loss function
-            loss = -elbo.mean()
+            loss = -beta_elbo.mean()
             # Saving for diagnostics
             with torch.no_grad():
-                diagnostics = {'elbo': elbo.mean(), 'log_px':log_px.mean(), 'kl_z_L': kl_z_L.mean(),'kl_z_i': kl_z_i.mean(),'kl_c': kl_c.mean()}
+                diagnostics = {'beta_elbo':beta_elbo.mean(),'elbo': elbo.mean(), 'log_px':log_px.mean(), 'kl_z_L': kl_z_L.mean(),'kl_z_i': kl_z_i.mean(),'kl_c': kl_c.mean()}
         # Return loss, diagnostics and output
         return loss,diagnostics,outputs
 
