@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import scipy.stats as stats
 import matplotlib.pyplot as plt
 
 def plot_sequences(model, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samples=None):
@@ -17,15 +18,17 @@ def plot_sequences(model, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samples
         
         dat = PLOT_DATA[dataset_idx].to(device).unsqueeze(0)
         outputs = model.forward(dat)
-
-        log_probs = outputs["px"].log_prob(dat.view(-1)).exp().detach().cpu().numpy()
-        idx = log_probs < ANOMALY_THRESHOLD
-        anom = np.arange(len(PLOT_DATA[dataset_idx]))[idx.squeeze()]
-        
         mu = outputs["px"].mu.view(-1).detach().cpu().numpy()
         sigma = outputs["px"].sigma.view(-1).detach().cpu().numpy()
+
+        probs = outputs["px"].log_prob(dat.view(-1)).exp().detach().cpu().numpy()
+        anom_quantile = stats.norm.ppf(1 - ANOMALY_THRESHOLD/2, mu, sigma)
+        
+        idx = probs < ANOMALY_THRESHOLD
+        anom = np.arange(len(PLOT_DATA[dataset_idx]))[idx.squeeze()]
+
         ax.plot(mu, c="r", linewidth=2)
-        ax.fill_between(list(range(len(mu))), mu-2*sigma, mu+2*sigma, facecolor='red', alpha=0.5)
+        ax.fill_between(list(range(len(mu))), mu-anom_quantile*sigma, mu+anom_quantile*sigma, facecolor='red', alpha=0.5)
         ax.plot(dat.view(-1).detach().cpu().numpy(), c="b", linewidth=2)
         ax.scatter(anom, dat.view(-1).detach().cpu().numpy()[anom], c="r", s=50, label="anomaly")
         
@@ -34,4 +37,18 @@ def plot_sequences(model, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samples
         plt.setp(ax.get_xticklabels(), fontsize=10)
         plt.setp(ax.get_yticklabels(), fontsize=10)
     plt.show()
+
+
+def total_reconstruction_err(model, dataset, plot=True):
+    model_output = model.forward(dataset)
+    squared_errors = torch.pow(model_output["px"].mu - dataset.squeeze(), 2) 
+    sse_samples = squared_errors.sum(-1).detach().cpu().numpy()
+    
+    if plot:
+        fig, ax = plt.subplots()
+        ax.hist(sse_samples, log=True, bins=25)
+        ax.set_title("Histogram of Summed Squared Error for each sequence")
+        plt.show()
+    
+    return sse_samples
     
