@@ -2,3 +2,6 @@ https://colab.research.google.com/drive/1HHXancr1yMBVKvyGwOCDS-hFWkwmRyim#scroll
 https://colab.research.google.com/drive/1PgAJ_WekuwUCwxxm4Ujq7oJU8CME26VH?usp=sharing
 
 https://colab.research.google.com/drive/1SEbqkuKNOIiXs7yPUEIxlJ9QOxF05Qte?usp=sharing
+
+NS training on data
+https://colab.research.google.com/drive/1_aeUZDuc1c6_llw2JuX3jyihcxmNO5qj?usp=sharing
