@@ -10,7 +10,6 @@ def plot_sequences(model, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samples
     if samples is None:
         samples = np.random.choice(len(PLOT_DATA), replace=False, size=NUM_PLOTS)
     fig, axes = plt.subplots(nrows=int(np.sqrt(NUM_PLOTS)), ncols=int(np.sqrt(NUM_PLOTS)))
-    fig.tight_layout()
     fig.set_size_inches(16, 9)
     for i, ax in enumerate(axes.flat):
 
@@ -22,7 +21,7 @@ def plot_sequences(model, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samples
         sigma = outputs["px"].sigma.view(-1).detach().cpu().numpy()
 
         probs = outputs["px"].log_prob(dat.view(-1)).exp().detach().cpu().numpy()
-        anom_quantile = stats.norm.ppf(1 - ANOMALY_THRESHOLD/2, mu, sigma)
+        anom_quantile = stats.norm.ppf(1 - ANOMALY_THRESHOLD/2)
         
         idx = probs < ANOMALY_THRESHOLD
         anom = np.arange(len(PLOT_DATA[dataset_idx]))[idx.squeeze()]
@@ -36,6 +35,7 @@ def plot_sequences(model, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samples
         ax.set_ylim(min_val-2*sigma.max(), max_val+2*sigma.max())
         plt.setp(ax.get_xticklabels(), fontsize=10)
         plt.setp(ax.get_yticklabels(), fontsize=10)
+    fig.tight_layout()
     plt.show()
 
 
