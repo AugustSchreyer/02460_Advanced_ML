@@ -239,6 +239,25 @@ class BaseLSTM_VAEprob(nn.Module):
             diagnostics = {'elbo': elbo, 'log_px':log_px, 'kl': kl}
             
         return loss, diagnostics, outputs
+    
+    
+    def reconstruction(self, x):
+        # flatten the input
+        x = x.view(x.size(0), -1)
+        
+        # define the posterior q(z|x) / encode x into q(z|x)
+        qz = self.posterior(x)
+        
+        # define the prior p(z)
+        pz = self.prior(batch_size=x.size(0))
+        
+        # sample the posterior using the reparameterization trick: z ~ q(z | x)
+        z = qz.mu
+        
+        # define the observation model p(x|z) = B(x | g(z))
+        px = self.observation_model(z)
+        
+        return {'px': px, 'pz': pz, 'qz': qz, 'z': z}
 
     
 
