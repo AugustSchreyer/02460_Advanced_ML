@@ -5,17 +5,19 @@ import matplotlib.pyplot as plt
 
 def plot_sequences(model, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samples=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    max_val = PLOT_DATA.max()
-    min_val = PLOT_DATA.min()
+    #max_val = PLOT_DATA.max()
+    #min_val = PLOT_DATA.min()
     if samples is None:
         samples = np.random.choice(len(PLOT_DATA), replace=False, size=NUM_PLOTS)
     fig, axes = plt.subplots(nrows=int(np.sqrt(NUM_PLOTS)), ncols=int(np.sqrt(NUM_PLOTS)))
     fig.set_size_inches(16, 9)
     for i, ax in enumerate(axes.flat):
-
+    
         dataset_idx = samples[i]
         
         dat = PLOT_DATA[dataset_idx].to(device).unsqueeze(0)
+    
+
         outputs = model.forward(dat)
         mu = outputs["px"].mu.view(-1).detach().cpu().numpy()
         sigma = outputs["px"].sigma.view(-1).detach().cpu().numpy()
@@ -32,7 +34,7 @@ def plot_sequences(model, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samples
         ax.scatter(anom, dat.view(-1).detach().cpu().numpy()[anom], c="r", s=50, label="anomaly")
         
         ax.set_title(f"Sample {samples[i]}", fontdict={"size": 12})
-        ax.set_ylim(min_val-2*sigma.max(), max_val+2*sigma.max())
+        #ax.set_ylim(min_val-2*sigma.max(), max_val+2*sigma.max())
         plt.setp(ax.get_xticklabels(), fontsize=10)
         plt.setp(ax.get_yticklabels(), fontsize=10)
     fig.tight_layout()
