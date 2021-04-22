@@ -4,6 +4,7 @@ import scipy.stats as stats
 import matplotlib.pyplot as plt
 
 def plot_sequences(model, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samples=None):
+    model.eval()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     #max_val = PLOT_DATA.max()
     #min_val = PLOT_DATA.min()
@@ -42,6 +43,7 @@ def plot_sequences(model, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samples
 
 
 def total_reconstruction_err(model, dataset, plot=True):
+    model.eval()
     model_output = model.reconstruction(dataset)
     squared_errors = torch.pow(model_output["px"].mu - dataset.squeeze(), 2) 
     sse_samples = squared_errors.sum(-1).detach().cpu().numpy()
@@ -53,4 +55,28 @@ def total_reconstruction_err(model, dataset, plot=True):
         plt.show()
     
     return sse_samples
-    
+
+
+def outlier_heuristic(model, data, window_size, num_outliers, ANOMALY_THRESHOLD):
+    model.eval()
+    outliers_idx = []
+
+    # Predict on all sequences and get probabilities
+    num_sequences = len(data)
+    outputs = model.reconstruction(data)
+    probs = outputs["px"].log_prob(data.squeeze(-1)).exp().detach().cpu().numpy()
+
+    # loop through sequences and detect where prob below ANOMALY THRESHOLD
+    for i in range(num_sequences):
+        prob_i = probs[i]
+        idx = prob_i < ANOMALY_THRESHOLD
+
+        # SLIDE OVER ALL IDX WHERE PROB < ANOMALY_THRESHOLD
+        for j in range(len(prob_i) - window_size-1):
+            # GET WINDOW, IF WINDOW HAS MORE THAN num_outliers, THEN SEQUENCE IS AN OUTLIER!
+            window_sequence = idx[j:j+window_size]
+            if sum(window_sequence) > num_outliers:
+                outliers_idx.append(i)
+                break
+
+    return outliers_idx
