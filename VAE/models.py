@@ -240,7 +240,7 @@ class BaseLSTM_VAEprob(nn.Module):
             
         return loss, diagnostics, outputs
     
-    
+
     def reconstruction(self, x):
         # flatten the input
         x = x.view(x.size(0), -1)
@@ -638,28 +638,98 @@ class Neural_Stat(nn.Module):
         # Return loss, diagnostics and output
         return loss,diagnostics,outputs
 
+    def interference_z_posterior_reconstruction(self,h_all,c_extra):
+        """Return z and its posterior distribution of `q(z|x,c) = N(z | \mu(x,c), \sigma(x,c))`"""
+        # Concatenate c and h
+        conc = torch.cat((c_extra,h_all),dim=-1)
+        q_z_params = self.encode_z_from_h_c(conc)
+        # Get mu and sigma for z_L
+        mu, log_sigma = q_z_params.chunk(2, dim=-1)
+        # Temporary distribution for z_L
+        tmp_z_dist = ReparameterizedDiagonalGaussian(mu,log_sigma)
+        post_z_L = tmp_z_dist
+        # Loop for sampling z and dependend layers
+        for i in range(self.z_layers):
+            # Sample z
+            last_z = tmp_z_dist.mu
+            # concatenate to get 1 z matrix
+            #print(z.shape)
+            #print(last_z.shape)
+            if i==0:
+                z_L = last_z
+            elif i==1:
+                z_i = last_z
+            else:
+                z_i = torch.cat((z_i,last_z),-1)
+            # If it is not the last layer, get new distribution
+            if i != (self.z_layers-1):
+                # Concatenate for new means/variances
+                tmp_conc = torch.cat((conc,last_z),-1)
+                z_par = self.posterior_z_from_z(tmp_conc)
+                tmp_mu,tmp_log_sig = z_par.chunk(2,dim=-1)
+                # temporary distribution for z_i|z_i+1
+                tmp_z_dist = ReparameterizedDiagonalGaussian(tmp_mu,tmp_log_sig)
+                # Concatenate/save new means/variances
+                if i==0:
+                    mu_i = tmp_mu
+                    log_sig_i = tmp_log_sig
+                else:
+                    mu_i = torch.cat((mu_i,tmp_mu),-1)
+                    log_sig_i = torch.cat((log_sig_i,tmp_log_sig),-1)
+
+        # Save all means and variances as one distribution with extra dimensions
+        post_z_i = ReparameterizedDiagonalGaussian(mu_i,log_sig_i)
+        # return both z and posterior distribution.
+        if self.z_layers==1:
+            #z = z_L
+            return post_z_L,z_L
+        else:
+            #z = torch.cat((z_L,z_i))
+            return post_z_L,z_L,post_z_i,z_i
+
     def reconstruction(self,dataset):
 
+        """Forward step. See code"""
         batch_size = dataset.size(0)
         # Get from datapoints x to h
         h_all = self.encode_h(dataset)
         # get posterior_c distribution from h_all-> mean
         posterior_c = self.statistics_network(h_all)        
+        # prior of c
+        prior_c = self.prior_c(batch_size=batch_size)
+        # sample c from posterior
         c = posterior_c.mu
-        # Making C-parameters for concatenating
         n2 = dataset.size(1)
-        c_extra = torch.cat(n2*[c.reshape((batch_size,1,self.latent_c))],dim=-1)
+        # Making C-parameters for concatenating
+        c_extra = c #torch.cat(n2*[c.reshape((batch_size,1,self.latent_c))],dim=1)
         
         if self.z_layers == 1:
             # getting z and posterior of z
-            posterior_z_L,z_L = self.interference_z_posterior(h_all,c_extra)
+            posterior_z_L,z_L = self.interference_z_posterior_reconstruction(h_all,c_extra)
             z = z_L
-          
+            # Prior of z
+            prior_z_L = self.latent_decoder_z_prior(c_extra)
+            # Distribution of p(x|z,c_extra)
+            p_x = self.observation_decoder_network(z,c_extra)
+            return {'px': p_x, 
+                    'posterior_z_L': posterior_z_L, 
+                    'prior_z_L': prior_z_L,'z_L': z_L,
+                    'posterior_c': posterior_c, 
+                    'prior_c': prior_c,'c': c,
+                    'z': z}
         else:
             # getting z and posterior of z
-            posterior_z_L,z_L,posterior_z_i,z_i = self.interference_z_posterior(h_all,c_extra)
+            posterior_z_L,z_L,posterior_z_i,z_i = self.interference_z_posterior_reconstruction(h_all,c_extra)
+            # Prior of z
+            prior_z_L,prior_z_i = self.latent_decoder_z_prior(c_extra,z_L,z_i)
             z = torch.cat((z_L,z_i),-1)
-        # Distribution of p(x|z,c_extra)
-        p_x = self.observation_decoder_network(z,c_extra)
-        x = p_x.sample()
-        return x
+            # Distribution of p(x|z,c_extra)
+            p_x = self.observation_decoder_network(z,c_extra)
+            return {'px': p_x, 
+                    'posterior_z_L': posterior_z_L,
+                    'posterior_z_i': posterior_z_i,
+                    'prior_z_L': prior_z_L,'z_L': z_L,
+                    'prior_z_i': prior_z_i,'z_i': z_i,
+                    'posterior_c': posterior_c, 
+                    'prior_c': prior_c,'c': c,
+                    'z': z}

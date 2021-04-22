@@ -18,7 +18,7 @@ def plot_sequences(model, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samples
         dat = PLOT_DATA[dataset_idx].to(device).unsqueeze(0)
     
 
-        outputs = model.forward(dat)
+        outputs = model.reconstruction(dat)
         mu = outputs["px"].mu.view(-1).detach().cpu().numpy()
         sigma = outputs["px"].sigma.view(-1).detach().cpu().numpy()
 
@@ -42,7 +42,7 @@ def plot_sequences(model, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samples
 
 
 def total_reconstruction_err(model, dataset, plot=True):
-    model_output = model.forward(dataset)
+    model_output = model.reconstruction(dataset)
     squared_errors = torch.pow(model_output["px"].mu - dataset.squeeze(), 2) 
     sse_samples = squared_errors.sum(-1).detach().cpu().numpy()
     
