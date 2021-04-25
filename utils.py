@@ -74,9 +74,9 @@ def outlier_heuristic(model, data, window_size, num_outliers, ANOMALY_THRESHOLD)
     outliers_idx = []
 
     # Predict on all sequences and get probabilities
-    num_sequences = len(data.to(device))
+    num_sequences = len(data)
     with torch.no_grad():
-        outputs = model.reconstruction(data.to(device))
+        outputs = model.reconstruction(data)
     #probs = outputs["px"].log_prob(train_dataset_simple[:10].to(device).squeeze(-1)).exp().detach().cpu().numpy()
     mu = outputs["px"].mu.detach().cpu().numpy()
     sigma = outputs["px"].sigma.detach().cpu().numpy()
