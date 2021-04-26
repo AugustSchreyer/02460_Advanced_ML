@@ -96,3 +96,69 @@ def outlier_heuristic(model, data, window_size, num_outliers, ANOMALY_THRESHOLD)
                 break
 
     return outliers_idx
+
+def add_voigt_sequences(sequences, w, plot=True, seed=None):
+    
+    if seed:
+        np.random.seed(seed)
+        
+    if w.max() < 1000:
+        w_short = True
+    else:
+        w_short = False
+    
+    min_uniform = 0.15
+    mu = np.random.choice(np.arange(100,900),size=1)
+    if mu>800:
+        max_uniform = min_uniform
+    elif mu < (360+mu*(400-300)/(715-270)):
+        max_uniform = 1+mu * (0.5-0.85)/(715-270)
+    else:
+        max_uniform = 1.1+mu * (0.3-0.8)/(715-270)
+        
+    voigt_added_sequences = torch.zeros_like(sequences)
+    
+    for i in range(len(sequences)):
+        
+        if w_short:
+            dat = sequences[i]
+        else:
+            dat = sequences[i, w<=1000]
+        max_val = dat.max() - dat.min()
+        mu = np.random.choice(np.arange(100,900),size=1)
+        if mu>800:
+            max_uniform = min_uniform
+        elif mu < (360+mu*(400-300)/(715-270)):
+            max_uniform = 1+mu * (0.5-0.85)/(715-270)
+        else:
+            max_uniform = 1.1+mu * (0.3-0.8)/(715-270)
+        alpha = np.random.uniform(low=min_uniform,high=max_uniform,size=1)
+        
+        if w_short:
+            voigt_added_sequences[i] = dat + voigt(w, mu, 12, 12, max_val*alpha)
+        else:
+            voigt_added_sequences[i] = dat + voigt(w[w<1001], mu, 12, 12, max_val*alpha)
+        
+    if plot:
+        i = np.random.choice(sequences.shape[0],size=16)
+        #i = np.arange(16)
+        min_height = 0.1
+        fig,axes = plt.subplots(4,4,figsize=(20,20))
+        for k,ax in enumerate(axes.flat):
+            
+            if w_short:
+                ax.plot(w,voigt_added_sequences[i[k]],label="voigt added",c = 'r')
+                ax.plot(w,sequences[i[k]],label="normal",c='b')
+            else:
+                ax.plot(w[w<1001],voigt_added_sequences[i[k]],label="voigt added",c = 'r')
+                ax.plot(w[w<1001],sequences[i[k],w<=1000],label="normal",c='b')
+            ax.legend()
+            ax.set_title("Testing voigt profile on data for seq:{}".format(i[k]))
+        fig.tight_layout()
+    
+    # ensure we get sequences of shape (BATCH SIZE, SEQ LEN, NUM_FEATURES)
+    if len(voigt_added_sequences.shape) < 3:
+        return voigt_added_sequences.unsqueeze(-1)
+    else:
+        return voigt_added_sequences
+
