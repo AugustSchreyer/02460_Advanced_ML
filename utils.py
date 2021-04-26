@@ -3,13 +3,14 @@ import numpy as np
 import scipy.stats as stats
 import matplotlib.pyplot as plt
 import scipy
+from matplotlib.gridspec import SubplotSpec
 
 def voigt(x,mu,sigma,gamma,z):
     y = scipy.special.voigt_profile(x-mu,sigma,gamma)
     y = z*y/np.max(y)
     return y
 
-def plot_sequences(model, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samples=None):
+def plot_sequences(model, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samples=None, save_dir=None):
     model.eval()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     #max_val = PLOT_DATA.max()
@@ -50,10 +51,12 @@ def plot_sequences(model, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samples
     lines, labels = fig.axes[-1].get_legend_handles_labels()
     fig.legend(lines, labels,bbox_to_anchor=(1.15, 0.5))
     fig.tight_layout()
+    if save_dir:
+        plt.save_fig(save_dir)
     plt.show()
 
 
-def total_reconstruction_err(model, dataset, plot=True):
+def total_reconstruction_err(model, dataset, plot=True, save_dir=None):
     with torch.no_grad():
         model.eval()
         model_output = model.reconstruction(dataset)
@@ -64,6 +67,9 @@ def total_reconstruction_err(model, dataset, plot=True):
         fig, ax = plt.subplots()
         ax.hist(sse_samples, log=True, bins=25)
         ax.set_title("Histogram of Summed Squared Error for each sequence")
+        
+        if save_dir:
+            plt.save_fig(save_dir)
         plt.show()
     
     return sse_samples
@@ -97,7 +103,7 @@ def outlier_heuristic(model, data, window_size, num_outliers, ANOMALY_THRESHOLD)
 
     return outliers_idx
 
-def add_voigt_sequences(sequences, w, plot=True, seed=None):
+def add_voigt_sequences(sequences, w, plot=True, seed=None, save_dir=None):
     
     if seed:
         np.random.seed(seed)
@@ -155,6 +161,9 @@ def add_voigt_sequences(sequences, w, plot=True, seed=None):
             ax.legend()
             ax.set_title("Testing voigt profile on data for seq:{}".format(i[k]))
         fig.tight_layout()
+        if save_dir:
+            plt.save_fig(save_dir)
+        plt.show()
     
     # ensure we get sequences of shape (BATCH SIZE, SEQ LEN, NUM_FEATURES)
     if len(voigt_added_sequences.shape) < 3:
@@ -162,3 +171,11 @@ def add_voigt_sequences(sequences, w, plot=True, seed=None):
     else:
         return voigt_added_sequences
 
+def create_subtitle(fig: plt.Figure, grid: SubplotSpec, title: str, fontsize):
+    "Sign sets of subplots with title"
+    row = fig.add_subplot(grid)
+    # the '\n' is important
+    row.set_title(f'{title}\n', fontweight='semibold', fontsize=fontsize)
+    # hide subplot
+    row.set_frame_on(False)
+    row.axis('off')
