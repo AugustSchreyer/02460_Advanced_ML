@@ -49,10 +49,10 @@ def plot_sequences(model, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samples
         plt.setp(ax.get_xticklabels(), fontsize=10)
         plt.setp(ax.get_yticklabels(), fontsize=10)
     lines, labels = fig.axes[-1].get_legend_handles_labels()
-    fig.legend(lines, labels,bbox_to_anchor=(1.15, 0.5))
+    lgd = fig.legend(lines, labels,bbox_to_anchor=(1.15, 0.5))
     fig.tight_layout()
     if save_dir:
-        plt.save_fig(save_dir)
+        plt.savefig(save_dir, bbox_extra_artists=(lgd,), bbox_inches='tight')
     plt.show()
 
 
@@ -69,7 +69,7 @@ def total_reconstruction_err(model, dataset, plot=True, save_dir=None):
         ax.set_title("Histogram of Summed Squared Error for each sequence")
         
         if save_dir:
-            plt.save_fig(save_dir)
+            plt.savefig(save_dir)
         plt.show()
     
     return sse_samples
@@ -162,7 +162,7 @@ def add_voigt_sequences(sequences, w, plot=True, seed=None, save_dir=None):
             ax.set_title("Testing voigt profile on data for seq:{}".format(i[k]))
         fig.tight_layout()
         if save_dir:
-            plt.save_fig(save_dir)
+            plt.savefig(save_dir)
         plt.show()
     
     # ensure we get sequences of shape (BATCH SIZE, SEQ LEN, NUM_FEATURES)
