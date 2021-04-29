@@ -10,7 +10,7 @@ def voigt(x,mu,sigma,gamma,z):
     y = z*y/np.max(y)
     return y
 
-def plot_sequences(model, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samples=None, save_dir=None):
+def plot_sequences(model, w, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samples=None, save_dir=None):
     model.eval()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     #max_val = PLOT_DATA.max()
@@ -38,41 +38,52 @@ def plot_sequences(model, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samples
         idx = (dat.view(-1).detach().cpu().numpy()>(mu+anom_quantile*sigma))|(dat.reshape(-1).detach().cpu().numpy()<(mu-anom_quantile*sigma)) 
 
         anom = np.arange(len(PLOT_DATA[dataset_idx]))[idx.squeeze()]
+        anom_x = w[idx.squeeze()]
+        #print(dat.view(-1).detach().cpu().numpy()[anom])
         
-        ax.plot(dat.view(-1).detach().cpu().numpy(), c="b", linewidth=2,label="data")
+        ax.plot(w, dat.view(-1).detach().cpu().numpy(), c="b", linewidth=2,label="data")
 
-        ax.plot(mu, c="r", linewidth=2,label = r"Mean reconstruction $\mu$")
-        ax.fill_between(list(range(len(mu))), mu-anom_quantile*sigma, mu+anom_quantile*sigma, facecolor='red', alpha=0.3,label =r"$\mu \pm \Phi^{-1}(1-\alpha/2)\cdot \sigma$")        
-        ax.scatter(anom, dat.view(-1).detach().cpu().numpy()[anom], c="g", s=50, label="Anomaly")
-        ax.set_title(f"Sample {samples[i]}", fontdict={"size": 12})
+        ax.plot(w, mu, c="r", linewidth=2,label = r"Mean reconstruction $\mu$")
+        ax.fill_between(w, mu-anom_quantile*sigma, mu+anom_quantile*sigma, facecolor='red', alpha=0.3,label =r"$\mu \pm \Phi^{-1}(1-\alpha/2)\cdot \sigma$")        
+        ax.scatter(anom_x, dat.view(-1).detach().cpu().numpy()[anom], c="g", s=50, label="Anomaly")
+        #ax.set_title(f"Sample {samples[i]}", fontdict={"size": 12})
+        ax.set_xlabel(r"Wavelength $(cm^{-1})$")
+        ax.set_ylabel(r"Intensity")
+        
         #ax.set_ylim(min_val-2*sigma.max(), max_val+2*sigma.max())
         plt.setp(ax.get_xticklabels(), fontsize=10)
         plt.setp(ax.get_yticklabels(), fontsize=10)
     lines, labels = fig.axes[-1].get_legend_handles_labels()
-    lgd = fig.legend(lines, labels,bbox_to_anchor=(1.15, 0.5))
+
+    lgd = fig.legend(lines, labels, loc='upper center', bbox_to_anchor=(0.5, 0.0485), fancybox=False, shadow=False, ncol=4)
     fig.tight_layout()
+    fig.subplots_adjust(bottom=0.1)
     if save_dir:
-        plt.savefig(save_dir, bbox_extra_artists=(lgd,), bbox_inches='tight')
+        plt.savefig(save_dir, bbox_extra_artists=(lgd,), )
+        
     plt.show()
 
 
-def total_reconstruction_err(model, dataset, plot=True, save_dir=None):
-    with torch.no_grad():
-        model.eval()
-        model_output = model.reconstruction(dataset)
-    squared_errors = torch.pow(model_output["px"].mu - dataset.squeeze(), 2) 
-    sse_samples = squared_errors.sum(-1).detach().cpu().numpy()
+def total_reconstruction_err(model=None, dataset=None, plot=True, save_dir=None, recon_errs=None, ax=None):
+    if recon_errs is None:
+        with torch.no_grad():
+            model.eval()
+            model_output = model.reconstruction(dataset)
+        squared_errors = torch.pow(model_output["px"].mu - dataset.squeeze(), 2) 
+        mse_samples = squared_errors.mean(-1).detach().cpu().numpy()
+    else:
+        mse_samples = np.array(recon_errs)
     
     if plot:
-        fig, ax = plt.subplots()
-        ax.hist(sse_samples, log=True, bins=25)
+        if not ax:
+            fig, ax = plt.subplots()
+        ax.hist(mse_samples, log=True, bins=25, color="black", fill=False, edgecolor='black', rwidth=0.85)
         ax.set_title("Histogram of Summed Squared Error for each sequence")
         
         if save_dir:
             plt.savefig(save_dir)
-        plt.show()
     
-    return sse_samples
+    return mse_samples
 
 
 def outlier_heuristic(model, data, window_size, num_outliers, ANOMALY_THRESHOLD):
