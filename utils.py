@@ -57,15 +57,15 @@ def plot_sequences(model, w, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samp
         plt.setp(ax.get_xticklabels(), fontsize=10)
         plt.setp(ax.get_yticklabels(), fontsize=10)
     lines, labels = fig.axes[-1].get_legend_handles_labels()
-
-    lgd = fig.legend(lines, labels, loc='upper center', bbox_to_anchor=(0.5, 0.0485), fancybox=False, shadow=False, ncol=4)
+    
+    lgd = fig.legend(lines, labels, loc='upper center', bbox_to_anchor=(0.5, 0.043), fancybox=False, shadow=False, ncol=4)
     fig.tight_layout()
-    fig.subplots_adjust(bottom=0.1)
+    #fig.subplots_adjust(bottom=0.1)
+    
     if save_dir:
-        plt.savefig(save_dir, bbox_extra_artists=(lgd,), )
+        plt.savefig(save_dir,bbox_inches='tight')#, bbox_extra_artists=(lgd,), )
         
     plt.show()
-
 
 def total_reconstruction_err(model=None, dataset=None, plot=True, save_dir=None, recon_errs=None, ax=None):
     if recon_errs is None:
