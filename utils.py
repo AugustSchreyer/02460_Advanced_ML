@@ -10,7 +10,7 @@ def voigt(x,mu,sigma,gamma,z):
     y = z*y/np.max(y)
     return y
 
-def plot_sequences(model, w, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samples=None, save_dir=None):
+def plot_sequences(model, w, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samples=None, save_dir=None,size=None):
     model.eval()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     #max_val = PLOT_DATA.max()
@@ -18,7 +18,10 @@ def plot_sequences(model, w, PLOT_DATA, NUM_PLOTS=9, ANOMALY_THRESHOLD=0.1, samp
     if samples is None:
         samples = np.random.choice(len(PLOT_DATA), replace=False, size=NUM_PLOTS)
     fig, axes = plt.subplots(nrows=int(np.sqrt(NUM_PLOTS)), ncols=int(np.sqrt(NUM_PLOTS)))
-    fig.set_size_inches(16, 9)
+    if size is None:
+        fig.set_size_inches(16, 9)
+    else:
+        fig.set_size_inches(*size)
     for i, ax in enumerate(axes.flat):
     
         dataset_idx = samples[i]
